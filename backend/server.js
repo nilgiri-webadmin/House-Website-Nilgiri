@@ -22,7 +22,7 @@ import contributorsRoutes from './routes/contributors.js';
 import statsRoutes from './routes/stats.js';
 import complaintsRoutes from './routes/complaints.js';
 import googleFormsRoutes from './routes/google-forms.js';
-import { rateLimit } from './middleware/rateLimiter.js';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -67,8 +67,20 @@ app.get('/health', (req, res) => {
 });
 
 // Rate limiting: a general cap on all API traffic, and a tighter one on sign-in
-app.use('/api', rateLimit({ windowMs: 60 * 1000, maxRequests: 100 }));
-app.use(['/api/auth/login', '/api/auth/google'], rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 10 }));
+app.use('/api', rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' }
+}));
+app.use(['/api/auth/login', '/api/auth/google'], rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many sign-in attempts, please try again later' }
+}));
 
 // API routes
 app.use('/api/auth', authRoutes);
