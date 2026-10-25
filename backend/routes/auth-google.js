@@ -1,6 +1,7 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../middleware/auth.js';
 import { OAuth2Client } from 'google-auth-library';
 
 const router = express.Router();
@@ -119,7 +120,7 @@ router.post('/google', async (req, res) => {
         role: adminUser.role,
         clubId: adminUser.club_id || undefined
       },
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 

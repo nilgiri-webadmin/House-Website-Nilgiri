@@ -22,28 +22,34 @@ import contributorsRoutes from './routes/contributors.js';
 import statsRoutes from './routes/stats.js';
 import complaintsRoutes from './routes/complaints.js';
 import googleFormsRoutes from './routes/google-forms.js';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway/Render put one proxy in front of the app; trust it so req.ip is the real client address
+app.set('trust proxy', 1);
+
 // CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  'https://*.vercel.app'
+  'https://house-website-nilgiri.vercel.app'
 ].filter(Boolean);
+
+// Preview deployments of this Vercel project, e.g.
+// https://house-website-nilgiri-n1mb7gjn7-nilgiei-webadmins-projects.vercel.app
+// https://house-website-nilgiri-git-<branch>-nilgiei-webadmins-projects.vercel.app
+const vercelPreviewOrigin = /^https:\/\/house-website-nilgiri-[a-z0-9-]+-nilgiei-webadmins-projects\.vercel\.app$/;
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.some(allowed =>
-      origin === allowed ||
-      origin.match(new RegExp(allowed.replace('*', '.*')))
-    )) {
+    if (allowedOrigins.includes(origin) || vercelPreviewOrigin.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -61,6 +67,22 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Rate limiting: a general cap on all API traffic, and a tighter one on sign-in
+app.use('/api', rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' }
+}));
+app.use(['/api/auth/login', '/api/auth/google'], rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many sign-in attempts, please try again later' }
+}));
 
 // API routes
 app.use('/api/auth', authRoutes);

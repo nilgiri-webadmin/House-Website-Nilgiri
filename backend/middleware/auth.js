@@ -1,5 +1,10 @@
 import jwt from 'jsonwebtoken';
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in environment variables');
+}
+export const JWT_SECRET = process.env.JWT_SECRET;
+
 // Authentication middleware
 export const authenticateToken = (req, res, next) => {
   try {
@@ -12,7 +17,7 @@ export const authenticateToken = (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret');
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // Normalize user object for consistency
     req.user = {
