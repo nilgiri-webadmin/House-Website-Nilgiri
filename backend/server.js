@@ -22,11 +22,15 @@ import contributorsRoutes from './routes/contributors.js';
 import statsRoutes from './routes/stats.js';
 import complaintsRoutes from './routes/complaints.js';
 import googleFormsRoutes from './routes/google-forms.js';
+import { rateLimit } from './middleware/rateLimiter.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Railway/Render put one proxy in front of the app; trust it so req.ip is the real client address
+app.set('trust proxy', 1);
 
 // CORS configuration
 const allowedOrigins = [
@@ -61,6 +65,10 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Rate limiting: a general cap on all API traffic, and a tighter one on sign-in
+app.use('/api', rateLimit({ windowMs: 60 * 1000, maxRequests: 100 }));
+app.use(['/api/auth/login', '/api/auth/google'], rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 10 }));
 
 // API routes
 app.use('/api/auth', authRoutes);
