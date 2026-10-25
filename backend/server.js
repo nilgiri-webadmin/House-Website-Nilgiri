@@ -36,18 +36,20 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  'https://*.vercel.app'
+  'https://house-website-nilgiri.vercel.app'
 ].filter(Boolean);
+
+// Preview deployments of this Vercel project, e.g.
+// https://house-website-nilgiri-n1mb7gjn7-nilgiei-webadmins-projects.vercel.app
+// https://house-website-nilgiri-git-<branch>-nilgiei-webadmins-projects.vercel.app
+const vercelPreviewOrigin = /^https:\/\/house-website-nilgiri-[a-z0-9-]+-nilgiei-webadmins-projects\.vercel\.app$/;
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.some(allowed =>
-      origin === allowed ||
-      origin.match(new RegExp(allowed.replace('*', '.*')))
-    )) {
+    if (allowedOrigins.includes(origin) || vercelPreviewOrigin.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
